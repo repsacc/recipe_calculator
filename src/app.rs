@@ -1,9 +1,18 @@
+#[derive(serde::Deserialize, serde::Serialize)]
+struct Ingredient {
+    name: String,
+    amount_str: String,
+    amount: u32,
+}
+
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
 pub struct TemplateApp {
     // Example stuff:
     label: String,
+
+    ingredients: Vec<Ingredient>,
 
     // this how you opt-out of serialization of a member
     #[serde(skip)]
@@ -16,6 +25,7 @@ impl Default for TemplateApp {
             // Example stuff:
             label: "Hello World!!".to_owned(),
             value: 2.7,
+            ingredients: Vec::with_capacity(32),
         }
     }
 }
@@ -45,7 +55,7 @@ impl eframe::App for TemplateApp {
     /// Called each time the UI needs repainting, which may be many times per second.
     /// Put your widgets into a `SidePanel`, `TopPanel`, `CentralPanel`, `Window` or `Area`.
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        let Self { label, value } = self;
+        let Self { label, value , ingredients } = self;
 
         // Examples of how to create different panels and windows.
         // Pick whichever suits you.
@@ -101,6 +111,36 @@ impl eframe::App for TemplateApp {
             //     "https://github.com/emilk/eframe_template/blob/master/",
             //     "Source code."
             // ));
+            ui.horizontal(|ui| {
+                ui.heading("Ingredients");
+
+                if ui.button("Add ingredient").clicked() {
+                    let new_ingredient = Ingredient {
+                    name: "New ingredient".to_string(),
+                    amount_str: "0".to_string(),
+                    amount: 0
+                    };
+                    ingredients.push(new_ingredient);
+                }
+            });
+
+            ui.horizontal(|ui| {
+                ui.label("Ingredient");
+                ui.label("Amount");
+            });
+
+            let mut my_string = String::new();
+
+            for ingredient in ingredients {
+                ui.horizontal(|ui| {
+                    ui.add(egui::TextEdit::singleline(&mut ingredient.name));
+                    ui.add(egui::TextEdit::singleline(&mut ingredient.amount_str));
+                    if let Ok(parsed) = ingredient.amount_str.parse::<u32>() {
+                        ingredient.amount = parsed;
+                    }
+                });
+            }
+
             egui::warn_if_debug_build(ui);
         });
 
