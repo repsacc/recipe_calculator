@@ -1,8 +1,13 @@
+use std::any;
+
 #[derive(serde::Deserialize, serde::Serialize)]
 struct Ingredient {
     name: String,
     amount_str: String,
     amount: u32,
+    selected: bool,
+    selected_amount: u32,
+    selected_amount_str: String,
 }
 
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
@@ -13,6 +18,8 @@ pub struct TemplateApp {
     label: String,
 
     ingredients: Vec<Ingredient>,
+    selected_ingredient_idx: i32,
+    modify_ingredient_amount: bool,
 
     // this how you opt-out of serialization of a member
     #[serde(skip)]
@@ -26,6 +33,8 @@ impl Default for TemplateApp {
             label: "Hello World!!".to_owned(),
             value: 2.7,
             ingredients: Vec::with_capacity(32),
+            selected_ingredient_idx: 0,
+            modify_ingredient_amount: false,
         }
     }
 }
@@ -55,7 +64,13 @@ impl eframe::App for TemplateApp {
     /// Called each time the UI needs repainting, which may be many times per second.
     /// Put your widgets into a `SidePanel`, `TopPanel`, `CentralPanel`, `Window` or `Area`.
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
-        let Self { label, value , ingredients } = self;
+        let Self { 
+            label,
+            value , 
+            ingredients,
+            selected_ingredient_idx,
+            modify_ingredient_amount,
+        } = self;
 
         // Examples of how to create different panels and windows.
         // Pick whichever suits you.
@@ -116,12 +131,20 @@ impl eframe::App for TemplateApp {
 
                 if ui.button("Add ingredient").clicked() {
                     let new_ingredient = Ingredient {
-                    name: "New ingredient".to_string(),
-                    amount_str: "0".to_string(),
-                    amount: 0
+                        name: "New ingredient".to_string(),
+                        amount_str: String::new(),
+                        amount: 0,
+                        selected: false,
+                        selected_amount: 0,
+                        selected_amount_str: String::new(),
                     };
                     ingredients.push(new_ingredient);
                 }
+            });
+
+            ui.horizontal(|ui| {
+                ui.radio_value(&mut *modify_ingredient_amount, false, "Off");
+                ui.radio_value(&mut *modify_ingredient_amount, true, "On")
             });
 
             ui.horizontal(|ui| {
@@ -129,12 +152,21 @@ impl eframe::App for TemplateApp {
                 ui.label("Amount");
             });
 
-            let mut my_string = String::new();
-
-            for ingredient in ingredients {
+            for (ingredient_index, ingredient) in ingredients.into_iter().enumerate() {
                 ui.horizontal(|ui| {
-                    ui.add(egui::TextEdit::singleline(&mut ingredient.name));
-                    ui.add(egui::TextEdit::singleline(&mut ingredient.amount_str));
+
+                    let radio_button = egui::RadioButton::new(*selected_ingredient_idx == ingredient_index as i32, "");
+                    if (ui.add_enabled(*modify_ingredient_amount, radio_button)).clicked() {
+                        *selected_ingredient_idx = ingredient_index as i32;
+                    }
+
+                    let ingredient_selected = *selected_ingredient_idx == ingredient_index as i32;
+
+                    let ingredient_enabled = !*modify_ingredient_amount || ingredient_selected;
+
+                    ui.add_enabled(ingredient_enabled, egui::TextEdit::singleline(&mut ingredient.name));
+                    ui.add_enabled(ingredient_enabled, egui::TextEdit::singleline(&mut ingredient.amount_str));
+
                     if let Ok(parsed) = ingredient.amount_str.parse::<u32>() {
                         ingredient.amount = parsed;
                     }
