@@ -1,19 +1,27 @@
 
-
 #[derive(serde::Deserialize, serde::Serialize)]
 struct Ingredient {
     name: String,
     amount_str: String,
-    amount: u32,
+    amount: f32,
 
     #[serde(skip)]
-    selected: bool,
-
-    #[serde(skip)]
-    selected_amount: u32,
+    selected_amount: f32,
 
     #[serde(skip)]
     selected_amount_str: String,
+}
+
+impl Default for Ingredient {
+    fn default() -> Self {
+        Self {
+            name: String::new(),
+            amount_str: String::new(),
+            amount: 0.0,
+            selected_amount: 0.0,
+            selected_amount_str: String::new(),
+        }
+    }
 }
 
 /// We derive Deserialize/Serialize so we can persist app state on shutdown.
@@ -22,6 +30,7 @@ struct Ingredient {
 pub struct TemplateApp {
     ingredients: Vec<Ingredient>,
     selected_ingredient_idx: i32,
+    selected_ingredient_ratio: f32,
     modify_ingredient_amount: bool,
 
     // // this how you opt-out of serialization of a member
@@ -34,6 +43,7 @@ impl Default for TemplateApp {
         Self {
             ingredients: Vec::with_capacity(32),
             selected_ingredient_idx: 0,
+            selected_ingredient_ratio: 0.0,
             modify_ingredient_amount: false,
         }
     }
@@ -67,6 +77,7 @@ impl eframe::App for TemplateApp {
         let Self { 
             ingredients,
             selected_ingredient_idx,
+            selected_ingredient_ratio,
             modify_ingredient_amount,
         } = self;
 
@@ -136,52 +147,78 @@ impl eframe::App for TemplateApp {
             ui.add_space(spacing);
 
             ui.horizontal(|ui| {
+                ui.style_mut().override_text_style = (egui::TextStyle::Monospace).into();
+                ui.add_space(2.0);
                 ui.label("Ingredient");
+                ui.add_space(87.0);
                 ui.label("Amount");
             });
 
-            let mut remove_ingredient_idx = (0, false);
+            let mut remove_ingredient_idx = (false, 0);
+
+            let ingredient_name_width = 125.0;
+            let ingredient_amount_width = 75.0;
 
             for (ingredient_index, ingredient) in ingredients.iter_mut().enumerate() {
                 ui.horizontal(|ui| {
+                    ui.add_enabled(!*modify_ingredient_amount, egui::TextEdit::singleline(&mut ingredient.name).desired_width(ingredient_name_width));
+
                     let radio_button = egui::RadioButton::new(*selected_ingredient_idx == ingredient_index as i32, "");
                     if (ui.add_visible(*modify_ingredient_amount, radio_button)).clicked() {
                         *selected_ingredient_idx = ingredient_index as i32;
                     }
 
                     let ingredient_selected = *selected_ingredient_idx == ingredient_index as i32;
-
                     let ingredient_enabled = !*modify_ingredient_amount || ingredient_selected;
 
-                    ui.add_enabled(ingredient_enabled, egui::TextEdit::singleline(&mut ingredient.name));
-                    ui.add_enabled(ingredient_enabled, egui::TextEdit::singleline(&mut ingredient.amount_str));
+                    if ingredient_selected && *modify_ingredient_amount {
+                        ui.add_enabled(ingredient_enabled, egui::TextEdit::singleline(&mut ingredient.selected_amount_str).desired_width(ingredient_amount_width));
 
-                    if let Ok(parsed) = ingredient.amount_str.parse::<u32>() {
-                        ingredient.amount = parsed;
+                        if let Ok(parsed) = ingredient.selected_amount_str.parse::<f32>() {
+                            ingredient.selected_amount = parsed;
+                            *selected_ingredient_ratio = ingredient.selected_amount as f32 / ingredient.amount as f32;
+                        }
+                    }
+                    else {
+                        ui.add_enabled(ingredient_enabled, egui::TextEdit::singleline(&mut ingredient.amount_str).desired_width(ingredient_amount_width));
+
+                        if let Ok(parsed) = ingredient.amount_str.parse::<f32>() {
+                            if let Ok(_) = ingredient.selected_amount_str.parse::<f32>() {
+                            }
+                            else {
+                                ingredient.selected_amount = parsed;
+                                ingredient.selected_amount_str = ingredient.amount_str.clone();
+                            }
+                            if *modify_ingredient_amount {
+                                // ingredient.amount = parsed * (*selected_ingredient_ratio);
+                                // ingredient.amount = selected_ingredient_ratio * parsed;
+                                // todo, gets multiplied each frame...
+                            }
+                            else {
+                                ingredient.amount = parsed;
+                            }
+                            ingredient.amount_str = ingredient.amount.to_string();
+                        }
                     }
 
-                    if ui.small_button("X").clicked() {
-                        remove_ingredient_idx = (ingredient_index, true);
+                    ui.label(selected_ingredient_ratio.to_string());
+                    ui.label(ingredient.amount.to_string());
+                    ui.label(ingredient.selected_amount.to_string());
+
+                    if ui.add_enabled(!*modify_ingredient_amount, egui::Button::new("X").small()).clicked() {
+                        remove_ingredient_idx = (true, ingredient_index);
                     }
                 });
             }
 
-            if remove_ingredient_idx.1 {
-                ingredients.remove(remove_ingredient_idx.0);
+            if remove_ingredient_idx.0 {
+                ingredients.remove(remove_ingredient_idx.1);
             }
 
             ui.add_space(spacing);
 
-            if ui.button("Add ingredient").clicked() {
-                let new_ingredient = Ingredient {
-                    name: String::new(),
-                    amount_str: String::new(),
-                    amount: 0,
-                    selected: false,
-                    selected_amount: 0,
-                    selected_amount_str: String::new(),
-                };
-                ingredients.push(new_ingredient);
+            if ui.add_enabled(!*modify_ingredient_amount, egui::Button::new("Add ingredient")).clicked() {
+                ingredients.push(Ingredient::default());
             }
 
             egui::warn_if_debug_build(ui);
