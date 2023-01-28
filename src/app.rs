@@ -14,24 +14,18 @@ struct Ingredient {
 #[derive(serde::Deserialize, serde::Serialize)]
 #[serde(default)] // if we add new fields, give them default values when deserializing old state
 pub struct TemplateApp {
-    // Example stuff:
-    label: String,
-
     ingredients: Vec<Ingredient>,
     selected_ingredient_idx: i32,
     modify_ingredient_amount: bool,
 
-    // this how you opt-out of serialization of a member
-    #[serde(skip)]
-    value: f32,
+    // // this how you opt-out of serialization of a member
+    // #[serde(skip)]
+    // value: f32,
 }
 
 impl Default for TemplateApp {
     fn default() -> Self {
         Self {
-            // Example stuff:
-            label: "Hello World!!".to_owned(),
-            value: 2.7,
             ingredients: Vec::with_capacity(32),
             selected_ingredient_idx: 0,
             modify_ingredient_amount: false,
@@ -65,8 +59,6 @@ impl eframe::App for TemplateApp {
     /// Put your widgets into a `SidePanel`, `TopPanel`, `CentralPanel`, `Window` or `Area`.
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame) {
         let Self { 
-            label,
-            value , 
             ingredients,
             selected_ingredient_idx,
             modify_ingredient_amount,
@@ -85,37 +77,37 @@ impl eframe::App for TemplateApp {
                     if ui.button("Quit").clicked() {
                         _frame.close();
                     }
-                });
+                })
             });
         });
 
-        egui::SidePanel::left("side_panel").show(ctx, |ui| {
-            ui.heading("Side Panel");
+        // egui::SidePanel::left("side_panel").show(ctx, |ui| {
+        //     ui.heading("Side Panel");
 
-            ui.horizontal(|ui| {
-                ui.label("Write something: ");
-                ui.text_edit_singleline(label);
-            });
+        //     ui.horizontal(|ui| {
+        //         ui.label("Write something: ");
+        //         ui.text_edit_singleline(label);
+        //     });
 
-            ui.add(egui::Slider::new(value, 0.0..=10.0).text("value"));
-            if ui.button("Increment").clicked() {
-                *value += 1.0;
-            }
+        //     ui.add(egui::Slider::new(value, 0.0..=10.0).text("value"));
+        //     if ui.button("Increment").clicked() {
+        //         *value += 1.0;
+        //     }
 
-            ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
-                ui.horizontal(|ui| {
-                    ui.spacing_mut().item_spacing.x = 0.0;
-                    ui.label("powered by ");
-                    ui.hyperlink_to("egui", "https://github.com/emilk/egui");
-                    ui.label(" and ");
-                    ui.hyperlink_to(
-                        "eframe",
-                        "https://github.com/emilk/egui/tree/master/crates/eframe",
-                    );
-                    ui.label(".");
-                });
-            });
-        });
+        //     ui.with_layout(egui::Layout::bottom_up(egui::Align::LEFT), |ui| {
+        //         ui.horizontal(|ui| {
+        //             ui.spacing_mut().item_spacing.x = 0.0;
+        //             ui.label("powered by ");
+        //             ui.hyperlink_to("egui", "https://github.com/emilk/egui");
+        //             ui.label(" and ");
+        //             ui.hyperlink_to(
+        //                 "eframe",
+        //                 "https://github.com/emilk/egui/tree/master/crates/eframe",
+        //             );
+        //             ui.label(".");
+        //         });
+        //     });
+        // });
 
         egui::CentralPanel::default().show(ctx, |ui| {
             // The central panel the region left after adding TopPanel's and SidePanel's
@@ -126,32 +118,25 @@ impl eframe::App for TemplateApp {
             //     "https://github.com/emilk/eframe_template/blob/master/",
             //     "Source code."
             // ));
-            ui.horizontal(|ui| {
-                ui.heading("Ingredients");
+            ui.heading("Recipe Calculator");
 
-                if ui.button("Add ingredient").clicked() {
-                    let new_ingredient = Ingredient {
-                        name: "New ingredient".to_string(),
-                        amount_str: String::new(),
-                        amount: 0,
-                        selected: false,
-                        selected_amount: 0,
-                        selected_amount_str: String::new(),
-                    };
-                    ingredients.push(new_ingredient);
-                }
+            ui.add_space(10.0);
+
+            ui.vertical(|ui| {
+                ui.label("Modify ingredient");
+
+                ui.horizontal(|ui| {
+                    ui.radio_value(&mut *modify_ingredient_amount, false, "Off");
+                    ui.radio_value(&mut *modify_ingredient_amount, true, "On")
+                });
             });
 
-            ui.horizontal(|ui| {
-                ui.radio_value(&mut *modify_ingredient_amount, false, "Off");
-                ui.radio_value(&mut *modify_ingredient_amount, true, "On")
-            });
+            ui.add_space(10.0);
 
             ui.horizontal(|ui| {
                 ui.label("Ingredient");
                 ui.label("Amount");
             });
-            
 
             for (ingredient_index, ingredient) in ingredients.iter_mut().enumerate() {
                 ui.horizontal(|ui| {
@@ -172,6 +157,20 @@ impl eframe::App for TemplateApp {
                         ingredient.amount = parsed;
                     }
                 });
+            }
+
+            ui.add_space(10.0);
+
+            if ui.button("Add ingredient").clicked() {
+                let new_ingredient = Ingredient {
+                    name: "New ingredient".to_string(),
+                    amount_str: String::new(),
+                    amount: 0,
+                    selected: false,
+                    selected_amount: 0,
+                    selected_amount_str: String::new(),
+                };
+                ingredients.push(new_ingredient);
             }
 
             egui::warn_if_debug_build(ui);
