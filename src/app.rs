@@ -5,8 +5,14 @@ struct Ingredient {
     name: String,
     amount_str: String,
     amount: u32,
+
+    #[serde(skip)]
     selected: bool,
+
+    #[serde(skip)]
     selected_amount: u32,
+
+    #[serde(skip)]
     selected_amount_str: String,
 }
 
@@ -64,6 +70,8 @@ impl eframe::App for TemplateApp {
             modify_ingredient_amount,
         } = self;
 
+        let spacing = 10.0;
+
         // Examples of how to create different panels and windows.
         // Pick whichever suits you.
         // Tip: a good default choice is to just keep the `CentralPanel`.
@@ -112,12 +120,6 @@ impl eframe::App for TemplateApp {
         egui::CentralPanel::default().show(ctx, |ui| {
             // The central panel the region left after adding TopPanel's and SidePanel's
 
-            // ui.heading("eframe template");
-            // ui.hyperlink("https://github.com/emilk/eframe_template");
-            // ui.add(egui::github_link_file!(
-            //     "https://github.com/emilk/eframe_template/blob/master/",
-            //     "Source code."
-            // ));
             ui.heading("Recipe Calculator");
 
             ui.add_space(10.0);
@@ -131,18 +133,19 @@ impl eframe::App for TemplateApp {
                 });
             });
 
-            ui.add_space(10.0);
+            ui.add_space(spacing);
 
             ui.horizontal(|ui| {
                 ui.label("Ingredient");
                 ui.label("Amount");
             });
 
+            let mut remove_ingredient_idx = (0, false);
+
             for (ingredient_index, ingredient) in ingredients.iter_mut().enumerate() {
                 ui.horizontal(|ui| {
-
                     let radio_button = egui::RadioButton::new(*selected_ingredient_idx == ingredient_index as i32, "");
-                    if (ui.add_enabled(*modify_ingredient_amount, radio_button)).clicked() {
+                    if (ui.add_visible(*modify_ingredient_amount, radio_button)).clicked() {
                         *selected_ingredient_idx = ingredient_index as i32;
                     }
 
@@ -156,14 +159,22 @@ impl eframe::App for TemplateApp {
                     if let Ok(parsed) = ingredient.amount_str.parse::<u32>() {
                         ingredient.amount = parsed;
                     }
+
+                    if ui.small_button("X").clicked() {
+                        remove_ingredient_idx = (ingredient_index, true);
+                    }
                 });
             }
 
-            ui.add_space(10.0);
+            if remove_ingredient_idx.1 {
+                ingredients.remove(remove_ingredient_idx.0);
+            }
+
+            ui.add_space(spacing);
 
             if ui.button("Add ingredient").clicked() {
                 let new_ingredient = Ingredient {
-                    name: "New ingredient".to_string(),
+                    name: String::new(),
                     amount_str: String::new(),
                     amount: 0,
                     selected: false,
