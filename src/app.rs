@@ -152,7 +152,7 @@ impl eframe::App for TemplateApp {
                 ui.label("Amount");
             });
 
-            for (ingredient_index, ingredient) in ingredients.into_iter().enumerate() {
+            for (ingredient_index, ingredient) in ingredients.iter_mut().enumerate() {
                 ui.horizontal(|ui| {
 
                     let radio_button = egui::RadioButton::new(*selected_ingredient_idx == ingredient_index as i32, "");
