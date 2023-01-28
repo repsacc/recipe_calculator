@@ -151,6 +151,7 @@ impl eframe::App for TemplateApp {
                 ui.label("Ingredient");
                 ui.label("Amount");
             });
+            
 
             for (ingredient_index, ingredient) in ingredients.iter_mut().enumerate() {
                 ui.horizontal(|ui| {
