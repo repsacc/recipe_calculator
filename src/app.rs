@@ -3,13 +3,8 @@
 struct Ingredient {
     name: String,
     amount_str: String,
-    amount: f32,
-
-    #[serde(skip)]
-    selected_amount: f32,
-
-    #[serde(skip)]
     selected_amount_str: String,
+    modified_amount_str: String,
 }
 
 impl Default for Ingredient {
@@ -17,9 +12,8 @@ impl Default for Ingredient {
         Self {
             name: String::new(),
             amount_str: String::new(),
-            amount: 0.0,
-            selected_amount: 0.0,
             selected_amount_str: String::new(),
+            modified_amount_str: String::new(),
         }
     }
 }
@@ -152,6 +146,8 @@ impl eframe::App for TemplateApp {
                 ui.label("Ingredient");
                 ui.add_space(87.0);
                 ui.label("Amount");
+                ui.add_space(65.0);
+                ui.add_visible(*modify_ingredient_amount, egui::Label::new("Original"));
             });
 
             let mut remove_ingredient_idx = (false, 0);
@@ -174,40 +170,41 @@ impl eframe::App for TemplateApp {
                     if ingredient_selected && *modify_ingredient_amount {
                         ui.add_enabled(ingredient_enabled, egui::TextEdit::singleline(&mut ingredient.selected_amount_str).desired_width(ingredient_amount_width));
 
-                        if let Ok(parsed) = ingredient.selected_amount_str.parse::<f32>() {
-                            ingredient.selected_amount = parsed;
-                            *selected_ingredient_ratio = ingredient.selected_amount as f32 / ingredient.amount as f32;
+                        let normal_amount_result = ingredient.amount_str.parse::<f32>();
+                        let selected_amount_result = ingredient.selected_amount_str.parse::<f32>();
+                        match (normal_amount_result, selected_amount_result) {
+                            (Ok(normal_amount), Ok(selected_amount)) => *selected_ingredient_ratio = selected_amount / normal_amount,
+                            _ => (),
+                        };
+                    }
+                    else if *modify_ingredient_amount {
+                        if let Ok(ingredient_amount) = ingredient.amount_str.parse::<f32>() {
+                            let modified_amount = *selected_ingredient_ratio * ingredient_amount;
+                            ingredient.modified_amount_str = modified_amount.to_string();
                         }
+                        ui.add_enabled(false, egui::TextEdit::singleline(&mut ingredient.modified_amount_str).desired_width(ingredient_amount_width));
                     }
                     else {
                         ui.add_enabled(ingredient_enabled, egui::TextEdit::singleline(&mut ingredient.amount_str).desired_width(ingredient_amount_width));
 
-                        if let Ok(parsed) = ingredient.amount_str.parse::<f32>() {
-                            if let Ok(_) = ingredient.selected_amount_str.parse::<f32>() {
-                            }
-                            else {
-                                ingredient.selected_amount = parsed;
-                                ingredient.selected_amount_str = ingredient.amount_str.clone();
-                            }
-                            if *modify_ingredient_amount {
-                                // ingredient.amount = parsed * (*selected_ingredient_ratio);
-                                // ingredient.amount = selected_ingredient_ratio * parsed;
-                                // todo, gets multiplied each frame...
-                            }
-                            else {
-                                ingredient.amount = parsed;
-                            }
-                            ingredient.amount_str = ingredient.amount.to_string();
+                        if ingredient.selected_amount_str.is_empty() {
+                            ingredient.selected_amount_str = ingredient.amount_str.clone();
                         }
                     }
-
-                    ui.label(selected_ingredient_ratio.to_string());
-                    ui.label(ingredient.amount.to_string());
-                    ui.label(ingredient.selected_amount.to_string());
 
                     if ui.add_enabled(!*modify_ingredient_amount, egui::Button::new("X").small()).clicked() {
                         remove_ingredient_idx = (true, ingredient_index);
                     }
+
+                    ui.horizontal(|ui| {
+                        ui.set_visible(*modify_ingredient_amount);
+                        ui.add_enabled(false, egui::TextEdit::singleline(&mut ingredient.amount_str).desired_width(ingredient_amount_width));
+                    });
+
+                    // ui.label(selected_ingredient_ratio.to_string());
+                    // ui.label(ingredient.amount_str.to_string());
+                    // ui.label(ingredient.selected_amount_str.to_string());
+                    // ui.label(ingredient.modified_amount_str.to_string());
                 });
             }
 
