@@ -3,6 +3,7 @@
 struct Ingredient {
     name: String,
     amount_str: String,
+    unit: String,
     selected_amount_str: String,
     modified_amount_str: String,
 }
@@ -12,6 +13,7 @@ impl Default for Ingredient {
         Self {
             name: String::new(),
             amount_str: String::new(),
+            unit: String::new(),
             selected_amount_str: String::new(),
             modified_amount_str: String::new(),
         }
@@ -146,14 +148,17 @@ impl eframe::App for TemplateApp {
                 ui.label("Ingredient");
                 ui.add_space(87.0);
                 ui.label("Amount");
-                ui.add_space(65.0);
+                ui.add_space(12.0);
+                ui.label("Unit");
+                ui.add_space(27.0);
                 ui.add_visible(*modify_ingredient_amount, egui::Label::new("Original"));
             });
 
             let mut remove_ingredient_idx = (false, 0);
 
             let ingredient_name_width = 125.0;
-            let ingredient_amount_width = 75.0;
+            let ingredient_amount_width = 45.0;
+            let ingredient_unit_width = 25.0;
 
             for (ingredient_index, ingredient) in ingredients.iter_mut().enumerate() {
                 ui.horizontal(|ui| {
@@ -192,13 +197,18 @@ impl eframe::App for TemplateApp {
                         }
                     }
 
+                    ui.add_enabled(!*modify_ingredient_amount, egui::TextEdit::singleline(&mut ingredient.unit).desired_width(ingredient_unit_width));
+
                     if ui.add_enabled(!*modify_ingredient_amount, egui::Button::new("X").small()).clicked() {
                         remove_ingredient_idx = (true, ingredient_index);
                     }
 
                     ui.horizontal(|ui| {
                         ui.set_visible(*modify_ingredient_amount);
-                        ui.add_enabled(false, egui::TextEdit::singleline(&mut ingredient.amount_str).desired_width(ingredient_amount_width));
+                        let mut original_amount = ingredient.amount_str.clone();
+                        original_amount.push_str(" ");
+                        original_amount.push_str(&ingredient.unit);
+                        ui.add_enabled(false, egui::TextEdit::singleline(&mut original_amount).desired_width(ingredient_amount_width));
                     });
 
                     // ui.label(selected_ingredient_ratio.to_string());
